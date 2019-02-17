@@ -14,6 +14,54 @@
 			padding-left: 10px;
 			padding-right: 10px;
 		}
+		
+		/* from https://www.w3schools.com/howto/howto_css_tooltip.asp */
+		/* Tooltip container */
+		.tooltip {
+		  position: relative;
+		  display: inline-block;
+		  border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+		}
+
+		/* Tooltip text */
+		.tooltip .tooltiptext {
+		  visibility: hidden;
+		  width: 600px;
+		  background-color: #555;
+		  color: #fff;
+		  text-align: justify;
+		  padding: 5px 10px;
+		  border-radius: 6px;
+
+		  /* Position the tooltip text */
+		  position: absolute;
+		  z-index: 1;
+		  bottom: 125%;
+		  left: 50%;
+		  margin-left: -60px;
+
+		  /* Fade in tooltip */
+		  opacity: 0;
+		  transition: opacity 0.3s;
+		}
+
+		/* Tooltip arrow */
+		.tooltip .tooltiptext::after {
+		  content: "";
+		  position: absolute;
+		  top: 100%;
+		  left: 50%;
+		  margin-left: -5px;
+		  border-width: 5px;
+		  border-style: solid;
+		  border-color: #555 transparent transparent transparent;
+		}
+
+		/* Show the tooltip text when you mouse over the tooltip container */
+		.tooltip:hover .tooltiptext {
+		  visibility: visible;
+		  opacity: 1;
+		}
 	</style>
 	<script>
 	function loginClick() {
@@ -267,11 +315,7 @@
 	// get run records
 	// prepare sql statement
 	// basic statement
-	if ($data["filter"]["track"]==-1) {
-		$sql = "SELECT r.date AS date, r.track AS track_id, r.time AS time, r.speed AS speed, '-' AS track, r.length AS length, r.length AS r_length FROM elrh_run_records r";
-	} else {
-		$sql = "SELECT r.date AS date, r.track AS track_id, r.time AS time, r.speed AS speed, t.name AS track, t.length AS length, r.length AS r_length FROM elrh_run_records r JOIN elrh_run_tracks t ON r.track = t.id";
-	}
+	$sql = "SELECT r.date AS date, r.track AS track_id, r.time AS time, r.speed AS speed, t.name AS track, r.dscr as misc_dscr, t.length AS length, r.length AS r_length FROM elrh_run_records r JOIN elrh_run_tracks t ON r.track = t.id";
 	// where clauses (track, year and month - if set)
 	$where = "";
 	if ($data["filter"]["track"]!="all") {
@@ -321,11 +365,17 @@
 			$row["length"] = $row["r_length"];
 			$data["runs"][$row_index]["length"] = $row["r_length"]; // for single-record-runs, length is kept within run record itself
 		}
-		$row_index++;
 		//
 		$data["total"]["count"]++;
 		$data["total"]["length"] += $row["length"];
 		$data["total"]["time"] = RunHelper::sumTimes($data["total"]["time"], $row["time"]);
+		// get track detail (TODO this is very ineffective way...)
+		$sql = "SELECT t.dscr AS track_dscr, t.map_link AS track_map FROM elrh_run_tracks t WHERE t.name = '" . $row["track"] . "'";
+		$track_detail = RunHelper::retrieveRow($mysqli, $sql);
+		$row["track_detail"] = $track_detail;
+		$data["runs"][$row_index] = $row;
+		//
+		$row_index++;
 	}
 	// set totals
 	if ($data["total"]["length"]>0) {
@@ -442,7 +492,13 @@
 					// run date
 					echo '<td class="runs"><strong>'.$row["date"].'</strong></td>'.PHP_EOL;
 					// run track
-					echo '<td class="runs-center">'.$row["track"].'</td>'.PHP_EOL;
+					echo '<td class="runs-center"><a href="'.$row["track_detail"]["track_map"].'"><div class="tooltip">'.$row["track"].'<span class="tooltiptext">';
+					if ($row["track"] == "Jednorázové" && !empty($row["misc_dscr"])) {
+						echo $row["misc_dscr"];
+					} else {
+						echo $row["track_detail"]["track_dscr"];
+					}
+					echo '</span></div></a></td>'.PHP_EOL;
 					// run length
 					echo '<td class="runs">'.$row["length"].' m</td>'.PHP_EOL;
 					// run time
@@ -519,7 +575,7 @@
 	}
 	?>
 	
-	<p><strong>Verze:</strong> 2017-07-09 <a href="#" title="Login" onClick="loginClick();"><i class="fa fa-lock" aria-hidden="true"></i></a></p>
+	<p><strong>Verze:</strong> 2019-02-17 <a href="#" title="Login" onClick="loginClick();"><i class="fa fa-lock" aria-hidden="true"></i></a></p>
 	<?php include("footer.php"); ?>
 </body>
 
