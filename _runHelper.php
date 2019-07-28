@@ -121,5 +121,15 @@ class RunHelper {
 		//
 		return $output[0].":".$output[1].":".$output[2].":".$output[3];
 	}
+	
+	// replace last occurence of string
+	// http://www.danielmayor.com/php-how-to-replace-just-the-last-match-of-a-string
+	function lreplace($search, $replace, $subject){
+		$pos = strrpos($subject, $search);
+		if($pos !== false){
+			$subject = substr_replace($subject, $replace, $pos, strlen($search));
+		}
+		return $subject;
+	}
 }
 ?>

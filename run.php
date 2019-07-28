@@ -219,9 +219,7 @@
 	
 	// deal with possible login
 	if (isset($_POST["jslogin"])) {
-		echo "isset login<br />";
 		if (hash("sha256", $_POST["jslogin"]) == '00293f13a097a8bda601a03414d50afffe207fd91f188f811897fdeb1aadb2bc') {
-			echo "isvalid login<br />";
 			$_SESSION["user"] = "admin";
 		}
 	}
@@ -245,8 +243,9 @@
 			if ($data["admin_input"]["track"]>-1) {
 				$data["admin_input"]["length"] = 0; // erease length info again for existing track (is kept in other table)
 			}
+			$data["admin_input"]["dscr"] = $_POST["admin_dscr"];
 			// insert into db
-			$result = $mysqli->query("INSERT INTO elrh_run_records (date, track, length, time, speed) VALUES ('".mysqli_real_escape_string($mysqli, $data["admin_input"]["date"] )."', '".mysqli_real_escape_string($mysqli, $data["admin_input"]["track"])."', '".mysqli_real_escape_string($mysqli, $data["admin_input"]["length"])."', '".mysqli_real_escape_string($mysqli, $data["admin_input"]["time"])."', '".mysqli_real_escape_string($mysqli, $data["admin_input"]["speed"])."');");
+			$result = $mysqli->query("INSERT INTO elrh_run_records (date, track, dscr, length, time, speed) VALUES ('".mysqli_real_escape_string($mysqli, $data["admin_input"]["date"] )."', '".mysqli_real_escape_string($mysqli, $data["admin_input"]["track"])."', '".mysqli_real_escape_string($mysqli, $data["admin_input"]["dscr"])."','".mysqli_real_escape_string($mysqli, $data["admin_input"]["length"])."', '".mysqli_real_escape_string($mysqli, $data["admin_input"]["time"])."', '".mysqli_real_escape_string($mysqli, $data["admin_input"]["speed"])."');");
 			if ($result) {
 				$data["admin_message"] = '<span style="color: green;">Vložen nový záznam</span>';
 			} else {
@@ -257,6 +256,7 @@
 			$data["admin_input"]["track"] = "";
 			$data["admin_input"]["length"] = "";
 			$data["admin_input"]["time"] = "";
+			$data["admin_input"]["dscr"] = "";
 		}
 	}
 	//
@@ -360,7 +360,6 @@
 	$data["total"]["time"] = "00:00:00";
 	$row_index = 0;
 	foreach ($data["runs"] as $row) {
-		$data["runs"][$row_index]["time"] = substr_replace($data["runs"][$row_index]["time"],'.', strrpos($data["runs"][$row_index]["time"], ':'), 1); // change : to . for miliseconds
 		if ($data["runs"][$row_index]["track_id"]==-1) {
 			$row["length"] = $row["r_length"];
 			$data["runs"][$row_index]["length"] = $row["r_length"]; // for single-record-runs, length is kept within run record itself
@@ -374,6 +373,7 @@
 		$track_detail = RunHelper::retrieveRow($mysqli, $sql);
 		$row["track_detail"] = $track_detail;
 		$data["runs"][$row_index] = $row;
+		$data["runs"][$row_index]["time"] = RunHelper::lreplace(':', '.', $data["runs"][$row_index]["time"]); // change : to . for miliseconds
 		//
 		$row_index++;
 	}
@@ -381,7 +381,7 @@
 	if ($data["total"]["length"]>0) {
 		$data["total"]["speed"] = RunHelper::getAVGSpeed($data["total"]["time"], $data["total"]["length"]);
 	}
-	$data["total"]["time"] = substr_replace($data["total"]["time"],'.', strrpos($data["total"]["time"], ':'), 1); // change : to . for miliseconds
+	$data["total"]["time"] = RunHelper::lreplace(':', '.', $data["total"]["time"]); // change : to . for miliseconds
 	// round length if needed
 	if ($data["total"]["length"]>9999) {
 		$data["total"]["length"] = round($data["total"]["length"] / 1000, 2) . " km";
@@ -394,13 +394,14 @@
 	<h1>PHP Běžecké statistiky</h1>
 	<p>Přehled mých běžeckých výkonů. Uchovává se datum, vzdálenost, čas a průměrná rychlost. Je tu vidět kompletní historie od roku 2013, kdy jsem s běháním začal.</p>
 	<p>Ve výchozím zobrazení je vidět posledních 30 běhů, volitelně jde zapnout přehled úplně všech, nebo záznamy filtrovat podle data či trati.</p>
+	<p>Po najetí na název trati se zobrazí podrobnosti běhu. Pokud jde o záznam běhu na pravidelné trasye, vede odkaz na plán trasy na mapy.cz a vedle trati je k dispozici ikona pro vyhledání všech běhů na dané trasy (řazených sestupně od nejlepších po nejhorší).</p>
 	
 	<?php
 	// runs section
 	echo '<h2>STATISTIKA BĚHŮ</h2>'.PHP_EOL;
 	// display filter
-	echo '<form id="filterForm" method="post" action="run.php?action=filter">'.PHP_EOL;
-		echo '<table style="margin: 10px;"><tr><td>'.PHP_EOL;
+	echo '<table style="margin: 10px;"><tr><td>'.PHP_EOL;
+		echo '<form id="filterForm" method="post" action="run.php?action=filter">'.PHP_EOL;
 			// mode
 			echo '<strong>Zobrazit:</strong>&nbsp;'.PHP_EOL;
 			echo '<select name="filter_mode">'.PHP_EOL;
@@ -468,8 +469,19 @@
 			echo '</select>'.PHP_EOL;
 			// submit
 			echo '&nbsp;&nbsp;<input type="submit" value="Filtrovat" />'.PHP_EOL;
-		echo '</td></tr></table>'.PHP_EOL;
-	echo '</form>'.PHP_EOL;
+		echo '</form>'.PHP_EOL;
+		// clear
+		echo '</td><td>'.PHP_EOL;
+		echo '<form id="filterForm" method="post" action="run.php?action=filter">'.PHP_EOL;
+			echo '&nbsp;&nbsp;<input type="submit" value="Obnovit výchozí" />'.PHP_EOL;
+			echo '<input type="hidden" name="filter_mode" value="last30">'.PHP_EOL;
+			echo '<input type="hidden" name="filter_track" value="all">'.PHP_EOL;
+			echo '<input type="hidden" name="filter_year" value="all">'.PHP_EOL;
+			echo '<input type="hidden" name="filter_month" value="all">'.PHP_EOL;
+			echo '<input type="hidden" name="filter_sort" value="date">'.PHP_EOL;
+			echo '<input type="hidden" name="filter_sort_desc" value="true">'.PHP_EOL;
+		echo '</form>'.PHP_EOL;
+	echo '</td></tr></table>'.PHP_EOL;
 	// display run entries (sorted by date desc, filtered by selection)
 	if (!empty($data["runs"])) {
 		echo '<table>'.PHP_EOL;
@@ -492,8 +504,24 @@
 					// run date
 					echo '<td class="runs"><strong>'.$row["date"].'</strong></td>'.PHP_EOL;
 					// run track
-					echo '<td class="runs-center"><a href="'.$row["track_detail"]["track_map"].'"><div class="tooltip">'.$row["track"].'<span class="tooltiptext">';
-					if ($row["track"] == "Jednorázové" && !empty($row["misc_dscr"])) {
+					echo '<form id="filterForm" method="post" action="run.php?action=filter" style="margin: 0; padding: 0;">'.PHP_EOL;
+					echo '<td class="runs-center">'.PHP_EOL;
+					if ($row["track_id"] != -1) {
+							echo '<input type="image" name="submit" alt="find track" src="sort.jpg">'.PHP_EOL;
+							echo '<input type="hidden" name="filter_track" value="'.$row["track_id"].'">'.PHP_EOL;
+							echo '<input type="hidden" name="filter_mode" value="all">'.PHP_EOL;
+							echo '<input type="hidden" name="filter_sort" value="speed">'.PHP_EOL;
+							echo '<input type="hidden" name="filter_sort_desc" value="true">'.PHP_EOL;
+					} else {
+						echo '<img src="no-sort.jpg" />'.PHP_EOL;
+					}
+					echo '</td">'.PHP_EOL;
+					echo '</form>'.PHP_EOL;
+					//
+					echo '<td class="runs-center">'.PHP_EOL;
+					echo '<a href="'.$row["track_detail"]["track_map"].'">'.PHP_EOL;
+					echo '<div class="tooltip">'.$row["track"].'<span class="tooltiptext">';
+					if (!empty($row["misc_dscr"])) {
 						echo $row["misc_dscr"];
 					} else {
 						echo $row["track_detail"]["track_dscr"];
@@ -539,7 +567,7 @@
 				}
 				echo '<tr>'.PHP_EOL;
 					echo '<td><strong>Datum:</strong></td>'.PHP_EOL;
-					echo '<td><input type="text" name="admin_date"';
+					echo '<td><input type="text" name="admin_date" style="width: 100%;"';
 						if (isset($data["admin_input"]["date"])) { echo ' value="'.$data["admin_input"]["date"].'"'; }
 					echo ' /></td>'.PHP_EOL;
 				echo '</tr>'.PHP_EOL;
@@ -557,15 +585,21 @@
 				echo '</tr>'.PHP_EOL;
 				echo '<tr>'.PHP_EOL;
 					echo '<td><strong>Vzdálenost:</strong></td>'.PHP_EOL;
-					echo '<td><input type="text" name="admin_length"';
+					echo '<td><input type="text" name="admin_length" style="width: 100%;"';
 						if (isset($data["admin_input"]["length"])) { echo ' value="'.$data["admin_input"]["length"].'"'; } else { echo ' value=" "'; } 
 					echo ' /></td>'.PHP_EOL;
 				echo '</tr>'.PHP_EOL;
 				echo '<tr>'.PHP_EOL;
 					echo '<td><strong>Čas:</strong></td>'.PHP_EOL;
-					echo '<td><input type="text" name="admin_time"';
+					echo '<td><input type="text" name="admin_time" style="width: 100%;"';
 						if (isset($data["admin_input"]["time"])) { echo ' value="'.$data["admin_input"]["time"].'"'; }
 					echo ' /></td>'.PHP_EOL;
+				echo '</tr>'.PHP_EOL;
+				echo '<tr>'.PHP_EOL;
+					echo '<td><strong>Popis:</strong></td>'.PHP_EOL;
+					echo '<td><textarea name="admin_dscr" style="width: 250px" rows="3">';
+						if (isset($data["admin_input"]["dscr"])) { echo $data["admin_input"]["dscr"]; }
+					echo '</textarea></td>'.PHP_EOL;
 				echo '</tr>'.PHP_EOL;
 				echo '<tr>'.PHP_EOL;
 					echo '<td colspan="2"><input type="submit" value="Odeslat" /></td>'.PHP_EOL;
@@ -575,7 +609,7 @@
 	}
 	?>
 	
-	<p><strong>Verze:</strong> 2019-02-17 <a href="#" title="Login" onClick="loginClick();"><i class="fa fa-lock" aria-hidden="true"></i></a></p>
+	<p><strong>Verze:</strong> 2019-07-28 <a href="#" title="Login" onClick="loginClick();"><i class="fa fa-lock" aria-hidden="true"></i></a></p>
 	<?php include("footer.php"); ?>
 </body>
 
