@@ -252,7 +252,7 @@
 				$data["admin_message"] = '<span style="color: red;">Vložení selhalo</span>';
 			}
 		} else {
-			$data["admin_input"]["date"] = "";
+			$data["admin_input"]["date"] = date("Y-m-d");
 			$data["admin_input"]["track"] = "";
 			$data["admin_input"]["length"] = "";
 			$data["admin_input"]["time"] = "";
@@ -345,6 +345,7 @@
 	if ($data["filter"]["sort_desc"]=="true") {
 		$sql .= " DESC";
 	}
+	$sql .= ", r.id DESC";
 	// limit part (if set)
 	if ($data["filter"]["mode"]=="last10") {
 		$sql .= " LIMIT 10";
@@ -609,7 +610,7 @@
 	}
 	?>
 	
-	<p><strong>Verze:</strong> 2019-07-28 <a href="#" title="Login" onClick="loginClick();"><i class="fa fa-lock" aria-hidden="true"></i></a></p>
+	<p><strong>Verze:</strong> 2019-12-26 <a href="#" title="Login" onClick="loginClick();"><i class="fa fa-lock" aria-hidden="true"></i></a></p>
 	<?php include("footer.php"); ?>
 </body>
 
