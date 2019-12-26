@@ -420,7 +420,7 @@
 			echo '</select>'.PHP_EOL;
 			// track
 			echo '&nbsp;&nbsp;<strong>Trať:</strong>&nbsp;'.PHP_EOL;
-			echo '<select name="filter_track">'.PHP_EOL;
+			echo '<select name="filter_track" onChange="submit()">'.PHP_EOL;
 				echo '<option value="all">Vše</option>'.PHP_EOL;
 				foreach ($data["tracks"] as $row) {
 					echo '<option value="'.$row["id"].'"';
