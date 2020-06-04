@@ -62,6 +62,28 @@
 		  visibility: visible;
 		  opacity: 1;
 		}
+		
+		/* Stats section */
+		.stats_cell {
+			text-align: center;
+			vertical-align: middle;
+			font-weight: bold;
+			font-size: 22px;
+			margin: 5px;
+		}
+		.stats_background {
+			padding: 20px;
+			border-radius: 50%;
+			display: block;
+			width: 100px;
+			height: 100px;
+		}
+		.stats_background_current {
+			background: #ffdd61;
+		}
+		.stats_background_best {
+			background: #03fc5a;
+		}
 	</style>
 	<script>
 	function loginClick() {
@@ -389,15 +411,56 @@
 	} else {
 		$data["total"]["length"] .= " m";
 	}
+	
+	// get statistics
+	$sql_current_month = 'SELECT SUM(r.length+t.length) AS distance, YEAR(CURRENT_DATE()) AS year, MONTH(CURRENT_DATE()) AS month FROM elrh_run_records r JOIN elrh_run_tracks t ON r.track = t.id WHERE MONTH(r.date) = MONTH(CURRENT_DATE()) AND YEAR(r.date) = YEAR(CURRENT_DATE())';
+	$sql_current_year = 'SELECT SUM(r.length+t.length) AS distance, YEAR(CURRENT_DATE()) AS year FROM elrh_run_records r JOIN elrh_run_tracks t ON r.track = t.id WHERE YEAR(r.date) = YEAR(CURRENT_DATE())';
+	$sql_best_month = 'SELECT SUM(r.length+t.length) AS distance, YEAR(r.date) AS year, MONTH(r.date) AS month FROM elrh_run_records r JOIN elrh_run_tracks t ON r.track = t.id GROUP BY YEAR(r.date), MONTH(r.date) ORDER BY SUM(r.length+t.length) DESC';
+	$sql_best_year = 'SELECT SUM(r.length+t.length) AS distance, YEAR(r.date) AS year FROM elrh_run_records r JOIN elrh_run_tracks t ON r.track = t.id GROUP BY YEAR(r.date) ORDER BY SUM(r.length+t.length) DESC';
+	
+	$stats["current_month"] = RunHelper::retrieveRow($mysqli, $sql_current_month);
+	$stats["current_year"] = RunHelper::retrieveRow($mysqli, $sql_current_year);
+	$stats["best_month"] = RunHelper::retrieveRow($mysqli, $sql_best_month);
+	$stats["best_year"] = RunHelper::retrieveRow($mysqli, $sql_best_year);
 ?>
 
 <body>
 	<h1>PHP Běžecké statistiky</h1>
 	<p>Přehled mých běžeckých výkonů. Uchovává se datum, vzdálenost, čas a průměrná rychlost. Je tu vidět kompletní historie od roku 2013, kdy jsem s běháním začal.</p>
+	<p>V barevných kruzích jsou vidět aktuální a nejlepší součty uběhnutých vzdáleností v měsíci a roce.</p>
 	<p>Ve výchozím zobrazení je vidět posledních 30 běhů, volitelně jde zapnout přehled úplně všech, nebo záznamy filtrovat podle data či trati.</p>
 	<p>Po najetí na název trati se zobrazí podrobnosti běhu. Pokud jde o záznam běhu na pravidelné trasye, vede odkaz na plán trasy na mapy.cz a vedle trati je k dispozici ikona pro vyhledání všech běhů na dané trasy (řazených sestupně od nejlepších po nejhorší).</p>
 	
 	<?php
+	
+	// stats section
+	echo '<table><tr>'.PHP_EOL;
+		echo '<td class="stats_cell">'.PHP_EOL;
+			echo '<div class="stats_background stats_background_current">'.PHP_EOL;
+				echo '<br />'.$stats["current_month"]["month"].'/'.$stats["current_month"]["year"].PHP_EOL;
+				echo '<br />'.round($stats["current_month"]["distance"] / 1000, 1)." km".PHP_EOL;
+			echo '</div>'.PHP_EOL;
+		echo '</td>'.PHP_EOL;
+		echo '<td class="stats_cell">'.PHP_EOL;
+			echo '<div class="stats_background stats_background_current">'.PHP_EOL;
+				echo '<br />'.$stats["current_year"]["year"].PHP_EOL;
+				echo '<br />'.round($stats["current_year"]["distance"] / 1000, 1)." km".PHP_EOL;
+			echo '</div>'.PHP_EOL;
+		echo '</td>'.PHP_EOL;
+		echo '<td class="stats_cell">'.PHP_EOL;
+			echo '<div class="stats_background stats_background_best">'.PHP_EOL;
+				echo '<br />'.$stats["best_month"]["month"].'/'.$stats["best_month"]["year"].PHP_EOL;
+				echo '<br />'.round($stats["best_month"]["distance"] / 1000, 1)." km".PHP_EOL;
+			echo '</div>'.PHP_EOL;
+		echo '</td>'.PHP_EOL;
+		echo '<td class="stats_cell">'.PHP_EOL;
+			echo '<div class="stats_background stats_background_best">'.PHP_EOL;
+				echo '<br />'.$stats["best_year"]["year"].PHP_EOL;
+				echo '<br />'.round($stats["best_year"]["distance"] / 1000, 1)." km".PHP_EOL;
+			echo '</div>'.PHP_EOL;
+		echo '</td>'.PHP_EOL;
+	echo '</tr></table>'.PHP_EOL;
+	
 	// runs section
 	echo '<h2>STATISTIKA BĚHŮ</h2>'.PHP_EOL;
 	// display filter
@@ -610,7 +673,7 @@
 	}
 	?>
 	
-	<p><strong>Verze:</strong> 2019-12-26 <a href="#" title="Login" onClick="loginClick();"><i class="fa fa-lock" aria-hidden="true"></i></a></p>
+	<p><strong>Verze:</strong> 2020-06-04 <a href="#" title="Login" onClick="loginClick();"><i class="fa fa-lock" aria-hidden="true"></i></a></p>
 	<?php include("footer.php"); ?>
 </body>
 
