@@ -1,4 +1,7 @@
+**NOTE: This repo was discontinued and archived in 12/2023**
+
 # Misc
+
 This project contains various single-file and single purpose web pages and scripts. Usually quite plain, simple and dull, but I actually use some of the features (especially password and lorem ipsum generator) from time to time. The language used for labels is Czech.
 To see it running, visit http://ellrohir.mzf.cz/
 
